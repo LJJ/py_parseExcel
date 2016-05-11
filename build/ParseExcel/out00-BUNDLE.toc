@@ -1,0 +1,3 @@
+([('ParseExcel',
+   '/Users/lujiji/WorkPlace/Python/workplace/untitled/dist/ParseExcel',
+   'EXECUTABLE')],)
