@@ -24,6 +24,7 @@ class Condition:
 
 
 class Calculator:
+    zx_xx = 0
     separate = 0
     var_amount = 0
     has_nm = False
@@ -38,6 +39,8 @@ class Calculator:
     nm_value = 3.5
     standards = []
     all_test_value = []
+    test_index = 0
+    original_test_value = []
     conditions = []
     four_code_percentage = []
     actual_amount = 0
@@ -45,22 +48,31 @@ class Calculator:
     result_dic = {"A":0,"B":0,"C":0,"D":0,"E":0,"F":0,"G":0,"H":0,"I":0,"J":0,"K":0,"L":0,"M":0}
     m_limit = 0
 
-    def __init__(self, test_values, standard_list, var_amount, nm, zx, *conditions):
+    def __init__(self, test_values, standard_list, var_amount, nm, zx, conditions):
         self.separate = len(standard_list)/3
         self.nm = nm
         self.zx = zx
+        self.original_test_value = test_values
+        for item in test_values:
+            self.all_test_value.append(item[1])
+
+        # self.all_test_value = test_values
         self.var_amount = var_amount
         self.standards = [standard_list[0:self.separate], standard_list[self.separate:self.separate*2], standard_list[self.separate*2:]]
-        total = sum(test_values) - self.nm_value*self.nm - 1.25 * self.zx
-        self.value_left = 1.25*self.zx/len(test_values)
-        self.average = total/self.var_amount
+        total = sum(self.all_test_value) - self.nm_value*self.nm - 1.25 * self.zx
+        self.value_left = 1.25*self.zx/len(self.all_test_value)
+        self.average = int(total/self.var_amount)
         if nm > 0:
             self.has_nm = True
-            self.average_with_nm = (sum(test_values)*0.3-self.nm_value*self.nm- 1 * self.zx)/self.var_amount/0.3
+            self.average_with_nm = (sum(self.all_test_value)*0.3-self.nm_value*self.nm- 1 * self.zx)/self.var_amount/0.3
 
-        self.calculate_grade_percentage(test_values)
-        print(self.actual_amount)
-        self.all_test_value = test_values
+        while abs(self.var_amount - self.actual_amount) > 30:
+            if self.var_amount - self.actual_amount > 0:
+                self.average -= 0.5
+            else:
+                self.average += 0.5
+            self.calculate_grade_percentage(self.all_test_value)
+
         self.conditions = conditions
 
         other_sum = 0.0
@@ -71,55 +83,77 @@ class Calculator:
             other_per += condition.percent
             other_sum += self.get_specified_var_everage(self.standards[1], condition.index)*self.var_amount*condition.percent
         self.last_var = int((total - other_sum)/(self.var_amount * (1-other_per)))
-        print(self.last_var)
         self.last_per = 1.0 - other_per
 
     def calculate(self):
-        left_amount = int(self.actual_amount*0.3)
+        left_amount = int(self.actual_amount)
         left_nm = self.nm
         self.result_list = []
         grade_amount = [0, 0, 0]
 
+        nm_number = 0
+        zx_num = 0
+
         for value in self.all_test_value:
+            if self.has_nm:
+                self.use_nm = self.probably_get_true(0.26)
+                if int(value*2)%2 == 1:
+                    self.use_nm = True
             if left_nm > 0:
-                self.use_nm = self.probably_get_true(0.3)
                 tmp_left_amount = left_amount
                 if left_amount <= 0:
                     tmp_left_amount = 1
-                self.one = float(tmp_left_amount)/left_nm
+                self.one = float(tmp_left_amount*0.3)/left_nm
                 if self.one <= float(self.actual_amount*0.3)/self.nm:
-                    self.one = 0.2
+                    self.one = 0.1
             else:
                 self.has_nm = False
-                self.one = 1000
 
             need = self.need_var(value)
-            # index = self.get_index(need)
+            if self.has_nm and self.use_nm:
+                need -= 1
             grade = random.randrange(0, 3)
             result = self.calculate_one_var(value, grade, need)
             self.result_list.append(result)
             left_amount -= result.amount
             left_nm -= result.nm
             grade_amount[result.grade] += 1
+            self.test_index += 1
 
             for key, num in result.result.items():
                 self.result_dic[key] = self.result_dic[key] + num
+            if result.nm > 0:
+                nm_number += 1
+            if result.zx > 0 or result.zx2 > 0:
+                zx_num += 1
 
         for amount in grade_amount:
             print "%0.3f" % (float(amount)/len(self.result_list))
-        print "nm:%d amount:%d" %(self.nm-left_nm, self.actual_amount -left_amount)
+        print "nm:%d amount:%d" % (self.nm-left_nm, self.actual_amount -left_amount)
+        print "nm:%0.3f zx:%0.3f" % (float(nm_number)/len(self.all_test_value),float(zx_num)/len(self.all_test_value))
         for key, num in self.result_dic.items():
             if num > 0 and key != "M":
                 print "%s: %0.3f" % (key, float(num)/(self.actual_amount-left_amount))
             elif key == "M":
                 print("M:", num)
 
-    def calculate_one_var(self, value, grade, need):
-        if need == 0:
+    # def optimize_result(self):
+    #     zx_num = 0
+    #     for result in self.result_list:
+    #         if result.zx > 0 or result.zx2 > 0:
+    #             zx_num += 1
+    #     target_zx_num = len(self.all_test_value)*0.3
+    #     for result in self.result_list:
+
+
+    def calculate_one_var(self, value, grade, need_p):
+        need = need_p
+        index = self.get_index(need)
+        if need <= 0:
             grade = len(self.standards)-1
             index = self.separate-1
             need = 1
-        index = self.get_index(need)
+
         code = grade * self.separate + index + 1
         result = ValueResult(grade, code, value)
         rest = value
@@ -138,65 +172,94 @@ class Calculator:
         if self.has_nm and self.use_nm:
             need_nm = int(result.amount/self.one) + 1
             for n in range(0, need_nm):
-                if rest -3.5 > 0 and int((rest-3.5)*2) != 1:
+                if result.nm >= 50:
+                    break
+                if rest - 3.5 > 0 and int((rest-3.5)*2) != 1: #rest cannot equal to 0.5
                     result.nm += 1
                     rest -= 3.5
+            if rest >= 3.5 and int(rest*2)%2 > 0:
+                result.nm += 1
+                rest -= 3.5
 
-        can_add = self.canAdd(need)
-        while rest >= standard[1] and int(2*(rest-standard[0]))!= 1:
-            if can_add < 1:
-                if index == 2:
-                    print("alert")
-                return self.calculate_one_var(value, grade, need+1)
-            else:
-                var = self.pop_variable(standard, rest, result.result)
-                if var is None:
-                    var = ("A", standard[0])
-                can_add -= 1
-                rest -= var[1]
-                result.add_var(var[0])
+        if rest>40:
+            can_add = self.canAdd(need)
+            while rest >= standard[1] and int(2*(rest-standard[0]))!= 1:
+                if can_add < 1:
+                    if index == 2:
+                        print("alert")
+                    return self.calculate_one_var(value, grade, need+1)
+                else:
+                    var = self.pop_variable(standard, rest, result.result)
+                    if var is None:
+                        var = ("A", standard[0])
+                    can_add -= 1
+                    rest -= var[1]
+                    result.add_var(var[0])
+
+        if int(rest*2)%2 > 0:
+            if rest < 3 and grade<2:
+                return self.calculate_one_var(value, grade+1, need)
+            self.zx_xx +=1
+            rest -= 1.5
+            result.zx += 1
+
+        # for x in range(1,self.separate-1):
+        #     if rest > 0 and rest == result.amount*x and index-x >= 0:
+        #         result.index = index-x
+        #         code = grade * self.separate + index + 1
+        #         result.code = code
+        #         rest -= result.amount*x
+        #         break
 
         while rest > 0:
-            if int(rest*2)%2 > 0:
-                rest -= 1.5
-                result.zx += 1
-            elif rest >= 3:
-                per = random.randrange(0, 4)
-                if per == 0:
-                    result.zx += 2
-                    rest -= 3
+            if result.zx > 0:
+                if rest >= 3:
+                    per = random.randrange(0, 4)
+                    if per == 0:
+                        result.zx += 2
+                        rest -= 3
+                    else:
+                        result.zx2 += 1
+                        rest -= 1
                 else:
-                    result.zx2 += 1
-                    rest -= 1
+                    result.zx2 = rest
+                    rest = 0
+            # else:
+                # if rest > 20 and result.zx == 0:
+                #     print("alert",rest)
+            elif rest >= 2:
+                var_name = result.getMutableVar()
+                var_value = standard[kStandardChar.index(var_name)]
+                i = 0
+                for target_value in standard:
+                    if var_value + rest < target_value:
+                        break
+                    else:
+                        i += 1
+                i -= 1
+                if i > 12:
+                    i = 12
+                target_name = kStandardChar[i]
+                if target_name != var_name:
+                    target = standard[i]
+                    rest -= target - var_value
+                    result.exchange_var(var_name, target_name)
+                else:
+                    result.zx2 = rest
+                    rest = 0
+            elif grade > 0 and result.amount == 1:
+                result.grade -= 1
+                result.code -= self.separate
+                rest -= 1
             else:
-                if rest > 20:
-                    print("alert",rest)
-                # if rest >= 2:
-                #     var_name = result.getMutableVar()
-                #     var_value = standard[kStandardChar.index(var_name)]
-                #     i = 0
-                #     for target_value in standard:
-                #         if var_value + rest < target_value:
-                #             break
-                #         else:
-                #             i += 1
-                #     i -= 1
-                #     if i > 12:
-                #         i = 12
-                #     target_name = kStandardChar[i]
-                #     if target_name != var_name:
-                #         target = standard[i]
-                #         rest -= target - var_value
-                #         result.exchange_var(var_name, target_name)
-                #     else:
-                #         result.zx2 = rest
-                #         rest = 0
-                # else:
                 result.zx2 = rest
                 rest = 0
+
+        result.name = self.original_test_value[self.test_index][0]
         return result
 
     def calculate_grade_percentage(self, test_values):
+        self.actual_amount = 0
         if self.separate == 3:
             each_amount = [0,0,0]
             x = 0
@@ -240,8 +303,8 @@ class Calculator:
 
     def need_var(self, value):
         need = int(value/self.average)
-        if self.use_nm is not True :
-            need = int(value/self.average_with_nm)
+        # if self.use_nm is not True :
+        #     need = int(value/self.average_with_nm)
         # if need == 0:
         #     need = 1
         return need
@@ -328,17 +391,21 @@ class Calculator:
     def __find_close_last_var(self, standard, limit):
         index = 0
         for n in range(0,len(standard)):
-            if standard[n] > self.last_var:
+            if standard[n] > self.__get_last_var():
                 index = n
                 break
         if index > 0:
             up = standard[index]
             down = standard[index-1]
-            if limit > up or down - self.last_var < up - self.last_var:
-                index -= 1
+            # if limit > up or down - self.__get_last_var() < up - self.__get_last_var():
+            index -= 1
         return kStandardChar[index], standard[index]
 
-
+    def __get_last_var(self):
+        if self.use_nm and self.has_nm:
+            return self.last_var-5
+        else:
+            return self.last_var
 
 
 

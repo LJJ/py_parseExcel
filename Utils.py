@@ -24,7 +24,20 @@ class Utils:
     def get_test_data(cls, path):
         test_data = xlrd.open_workbook(path)
         table = test_data.sheet_by_index(0)
-        return remove_null_data(table.col_values(1))
+        index = 0
+        result = []
+        while True:
+            try:
+                row = table.row_values(index)
+                value = (row[0], row[1])
+                index += 1
+                if type(value[1]) == types.FloatType and value[1] > 13:
+                    if value[1]/0.5 % 1 == 0:
+                        result.append(value)
+            except:
+                break
+
+        return result
 
     @classmethod
     def get_standard_data(cls, path):
@@ -52,7 +65,7 @@ class Utils:
         # excel.sty
         table = excel.add_sheet("result",cell_overwrite_ok=True)
         # table.write()
-        first_wor = ["","num","test","var","code","nm","zx","zx2"]
+        first_wor = ["","","num","test","var","code","nm","zx","zx2"]
 
         n = 0
         for text in first_wor:

@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     verify = insertUser.verify()
     if verify:
-        BASE_DIR = './File1/'
+        BASE_DIR = './File/'
 
         json_file = file(BASE_DIR+"config.json")
         conf = json.load(json_file)
@@ -26,14 +26,16 @@ if __name__ == '__main__':
         allTestValue.extend(Utils.get_test_data(BASE_DIR + conf["file2"]))
         standardList = Utils.get_standard_data(BASE_DIR + conf["standard"])
 
+        conditions = []
+        for key, value in conf["con"].items():
+            conditions.append(Condition(key, value))
 
-        condition1 = Condition("E", conf["e"])
-        condition2 = Condition("F", conf["f"])
-        condition3 = Condition("M", conf["m"]/conf["amount"])
-        condition3.set_amount(conf["m"])
+        condition3 = Condition("M", conf["M"]/conf["amount"])
+        condition3.set_amount(conf["M"])
+        conditions.append(condition3)
         nm = conf["nm"]
 
-        config = Calculator(allTestValue, standardList, conf["amount"], nm, 1000, condition1, condition2, condition3)
+        config = Calculator(allTestValue, standardList, conf["amount"], nm, 1000, conditions)
         config.calculate()
         Utils.save(config.result_list)
 

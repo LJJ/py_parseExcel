@@ -3,6 +3,7 @@ __author__ = 'lujiji'
 kStandardChar = ["A","B","C","D","E","F","G","H","I","J","K","L","M"]
 
 class ValueResult:
+    name = ""
     result = {}
     grade = 0
     code = 0
@@ -40,9 +41,9 @@ class ValueResult:
                 continue
             if isFirst:
                 isFirst = False
-                list.append([index, self.originalValue, key, value, self.code, self.nm, self.zx, self.zx2])
+                list.append([index,self.name, self.originalValue, key, value, self.code, self.nm, self.zx, self.zx2])
             else:
-                list.append(["","",key,value, "","","",""])
+                list.append(["","","",key,value, "","","",""])
 
         return list
 
@@ -66,6 +67,11 @@ class ValueResult:
                 if kStandardChar.index(name) <= kStandardChar.index(var_name):
                     var_name = name
         return var_name
+
+    # def getMutableVar(self):
+    #     target = self.result.keys()
+    #     for key in target:
+    #         if kStandardChar.index(key)
 
     def exchange_var(self,var1_name, var2_name):
         try:
